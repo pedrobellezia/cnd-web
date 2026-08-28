@@ -11,8 +11,6 @@ interface CndResult {
   error?: CndError
 }
 
-const config = useRuntimeConfig()
-
 const files = ref<File[]>([])
 const isDragging = ref(false)
 const status = ref<'idle' | 'loading' | 'success' | 'error'>('idle')
@@ -128,7 +126,7 @@ const enviar = async (): Promise<void> => {
 
   try {
     const results = await $fetch<CndResult[]>(
-      `${config.public.apiUrl}${config.public.apiBasePath}`,
+      '/api/cnd',
       {
         method: 'POST',
         body: formData,

@@ -100,8 +100,6 @@
 }
 
 .action-btn:hover {
-  background: var(--btn-inverted-bg);
-  color: var(--btn-inverted-text);
   box-shadow: 6px 6px 0 var(--border-color);
   transform: translate(-3px, -3px);
 }

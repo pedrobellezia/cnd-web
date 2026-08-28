@@ -16,8 +16,6 @@ interface ApiError {
 }
 
 export function useFornecedor() {
-  const config = useRuntimeConfig()
-
   const fornecedorData = ref<Fornecedor | null>(null)
   const loading = ref(false)
   const error = ref('')
@@ -29,7 +27,7 @@ export function useFornecedor() {
 
     try {
       fornecedorData.value = await $fetch<Fornecedor>(
-        `${config.public.apiUrl}${config.public.apiBasePath}/${cnpj}`,
+        `/api/fornecedores/${cnpj}`,
         {
           query: {
             limit: 1,

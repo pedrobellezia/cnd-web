@@ -1,43 +1,110 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
-import SearchBar from '@/components/SearchBar.vue'
-import FornecedorInfo from '@/components/FornecedorInfo.vue'
-import CndCard from '@/components/CndCard.vue'
-import { useFornecedor } from '@/composables/useFornecedor'
+import { onMounted, reactive } from 'vue'
+import { useCnds } from '@/composables/useCnds'
 
-const route = useRoute()
+const TIPOS = ['fgts', 'trabalhista', 'estadual', 'municipal']
+const STATUSES = ['regular', 'irregular', 'error']
 
-const searchBarRef = ref<InstanceType<typeof SearchBar> | null>(null)
+const config = useRuntimeConfig()
 
 const {
-  fornecedorData,
+  cnds,
   loading,
   error,
-  buscarFornecedor,
-} = useFornecedor()
+  page,
+  totalPages,
+  buscarCnds,
+} = useCnds()
 
-const handleSearch = async (cnpj: string): Promise<void> => {
-  searchBarRef.value?.setLoading(true)
-  searchBarRef.value?.setError('')
+const filtros = reactive({
+  name: '',
+  cnpj: '',
+  status: [] as string[],
+  tipo: [] as string[],
+  emissaoDe: '',
+  emissaoAte: '',
+  validadeDe: '',
+  validadeAte: '',
+})
 
-  await buscarFornecedor(cnpj)
+const formatCNPJ = (value: string): string => {
+  const numbers = value.replace(/\D/g, '').slice(0, 14)
 
-  searchBarRef.value?.setLoading(false)
-
-  if (error.value) {
-    searchBarRef.value?.setError(error.value)
-  }
+  return numbers
+    .replace(/^(\d{2})(\d)/, '$1.$2')
+    .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+    .replace(/\.(\d{3})(\d)/, '.$1/$2')
+    .replace(/(\d{4})(\d)/, '$1-$2')
 }
 
-watch(
-  () => route.query.cnpj,
-  (cnpj) => {
-    if (typeof cnpj === 'string' && cnpj.trim() !== '') {
-      handleSearch(cnpj)
-    }
-  },
-  { immediate: true },
-)
+const formatDate = (dateString: string | null): string => {
+  if (!dateString) {
+    return '-'
+  }
+
+  return new Date(dateString).toLocaleDateString('pt-BR')
+}
+
+const isVencido = (dateString: string | null): boolean => {
+  if (!dateString) {
+    return false
+  }
+
+  return new Date(dateString) < new Date()
+}
+
+const getFileUrl = (fileName: string | null): string => {
+  if (!fileName) {
+    return '#'
+  }
+
+  return `${config.public.apiUrl}/public/${fileName}`
+}
+
+const aplicarFiltros = (): void => {
+  buscarCnds({
+    name: filtros.name,
+    cnpj: filtros.cnpj,
+    status: filtros.status,
+    tipo: filtros.tipo,
+    emissaoDe: filtros.emissaoDe,
+    emissaoAte: filtros.emissaoAte,
+    validadeDe: filtros.validadeDe,
+    validadeAte: filtros.validadeAte,
+    page: 1,
+  })
+}
+
+const limparFiltros = (): void => {
+  filtros.name = ''
+  filtros.cnpj = ''
+  filtros.status = []
+  filtros.tipo = []
+  filtros.emissaoDe = ''
+  filtros.emissaoAte = ''
+  filtros.validadeDe = ''
+  filtros.validadeAte = ''
+
+  buscarCnds({ page: 1 })
+}
+
+const irParaPagina = (novaPagina: number): void => {
+  buscarCnds({
+    name: filtros.name,
+    cnpj: filtros.cnpj,
+    status: filtros.status,
+    tipo: filtros.tipo,
+    emissaoDe: filtros.emissaoDe,
+    emissaoAte: filtros.emissaoAte,
+    validadeDe: filtros.validadeDe,
+    validadeAte: filtros.validadeAte,
+    page: novaPagina,
+  })
+}
+
+onMounted(() => {
+  buscarCnds()
+})
 </script>
 
 <template>
@@ -52,36 +119,260 @@ watch(
         </NuxtLink>
 
         <h1>Consulta de CNDs</h1>
+
+        <p class="subtitle">
+          Todas as certidões emitidas, com filtragem completa
+        </p>
       </header>
 
-      <SearchBar
-        ref="searchBarRef"
-        @search="handleSearch"
-      />
+      <form
+        class="filters"
+        @submit.prevent="aplicarFiltros"
+      >
+        <div class="filters-grid">
+          <div class="filter-field">
+            <label for="filtro-name">Fornecedor</label>
+
+            <input
+              id="filtro-name"
+              v-model="filtros.name"
+              type="text"
+              placeholder="Nome do fornecedor"
+              autocomplete="off"
+            />
+          </div>
+
+          <div class="filter-field">
+            <label for="filtro-cnpj">CNPJ</label>
+
+            <input
+              id="filtro-cnpj"
+              v-model="filtros.cnpj"
+              type="text"
+              placeholder="CNPJ ou vários separados por vírgula"
+              autocomplete="off"
+            />
+          </div>
+
+          <div class="filter-field">
+            <label for="filtro-emissao-de">Emissão de</label>
+
+            <input
+              id="filtro-emissao-de"
+              v-model="filtros.emissaoDe"
+              type="date"
+            />
+          </div>
+
+          <div class="filter-field">
+            <label for="filtro-emissao-ate">Emissão até</label>
+
+            <input
+              id="filtro-emissao-ate"
+              v-model="filtros.emissaoAte"
+              type="date"
+            />
+          </div>
+
+          <div class="filter-field">
+            <label for="filtro-validade-de">Validade de</label>
+
+            <input
+              id="filtro-validade-de"
+              v-model="filtros.validadeDe"
+              type="date"
+            />
+          </div>
+
+          <div class="filter-field">
+            <label for="filtro-validade-ate">Validade até</label>
+
+            <input
+              id="filtro-validade-ate"
+              v-model="filtros.validadeAte"
+              type="date"
+            />
+          </div>
+        </div>
+
+        <div class="filters-checkboxes">
+          <div class="checkbox-group">
+            <span class="checkbox-group__label">Tipo</span>
+
+            <label
+              v-for="tipo in TIPOS"
+              :key="tipo"
+              class="checkbox-item"
+            >
+              <input
+                v-model="filtros.tipo"
+                type="checkbox"
+                :value="tipo"
+              />
+
+              {{ tipo.toUpperCase() }}
+            </label>
+          </div>
+
+          <div class="checkbox-group">
+            <span class="checkbox-group__label">Status</span>
+
+            <label
+              v-for="status in STATUSES"
+              :key="status"
+              class="checkbox-item"
+            >
+              <input
+                v-model="filtros.status"
+                type="checkbox"
+                :value="status"
+              />
+
+              {{ status.toUpperCase() }}
+            </label>
+          </div>
+        </div>
+
+        <div class="filters-actions">
+          <button
+            type="submit"
+            class="filter-button"
+            :disabled="loading"
+          >
+            FILTRAR
+          </button>
+
+          <button
+            type="button"
+            class="filter-button filter-button--secondary"
+            :disabled="loading"
+            @click="limparFiltros"
+          >
+            LIMPAR
+          </button>
+        </div>
+      </form>
 
       <div
         v-if="loading"
-        class="loading-message"
+        class="feedback"
       >
-        BUSCANDO FORNECEDOR...
+        CARREGANDO CNDs...
       </div>
 
       <div
-        v-else-if="fornecedorData"
-        class="results-section"
+        v-else-if="error"
+        class="feedback feedback--error"
       >
-        <FornecedorInfo
-          :name="fornecedorData.name"
-          :cnpj="fornecedorData.cnpj"
-        />
+        <span>{{ error }}</span>
 
-        <div class="cards-container">
-          <CndCard
-            v-for="(cnd, index) in fornecedorData.cnd"
-            :key="index"
-            :cnd="cnd"
-          />
-        </div>
+        <button
+          type="button"
+          class="retry-button"
+          @click="aplicarFiltros"
+        >
+          TENTAR NOVAMENTE
+        </button>
+      </div>
+
+      <div
+        v-else-if="cnds.length === 0"
+        class="feedback"
+      >
+        NENHUMA CND ENCONTRADA
+      </div>
+
+      <div
+        v-else
+        class="table-wrapper"
+      >
+        <table class="cnds-table">
+          <thead>
+            <tr>
+              <th>Fornecedor</th>
+              <th>CNPJ</th>
+              <th>Tipo</th>
+              <th>Status</th>
+              <th>Emissão</th>
+              <th>Validade</th>
+              <th>Arquivo</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr
+              v-for="(cnd, index) in cnds"
+              :key="index"
+            >
+              <td>{{ cnd.fornecedor.name }}</td>
+
+              <td class="mono">
+                {{ formatCNPJ(cnd.fornecedor.cnpj) }}
+              </td>
+
+              <td>{{ cnd.cndtype?.name?.toUpperCase() || '-' }}</td>
+
+              <td>
+                <span
+                  class="status-badge"
+                  :class="{
+                    'status-badge--regular': cnd.status === 'regular' && !isVencido(cnd.validade),
+                    'status-badge--irregular': cnd.status === 'irregular',
+                    'status-badge--error': cnd.status === 'error',
+                    'status-badge--expired': cnd.status === 'regular' && isVencido(cnd.validade),
+                  }"
+                >
+                  {{ isVencido(cnd.validade) && cnd.status === 'regular' ? 'VENCIDA' : cnd.status.toUpperCase() }}
+                </span>
+              </td>
+
+              <td>{{ formatDate(cnd.emissao) }}</td>
+
+              <td>{{ formatDate(cnd.validade) }}</td>
+
+              <td>
+                <a
+                  v-if="cnd.file_name"
+                  :href="getFileUrl(cnd.file_name)"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="file-link"
+                >
+                  VER PDF
+                </a>
+
+                <span v-else>-</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div
+        v-if="!loading && !error && totalPages > 1"
+        class="pagination"
+      >
+        <button
+          type="button"
+          class="pagination-button"
+          :disabled="page <= 1"
+          @click="irParaPagina(page - 1)"
+        >
+          ← ANTERIOR
+        </button>
+
+        <span class="pagination-info">
+          PÁGINA {{ page }} DE {{ totalPages }}
+        </span>
+
+        <button
+          type="button"
+          class="pagination-button"
+          :disabled="page >= totalPages"
+          @click="irParaPagina(page + 1)"
+        >
+          PRÓXIMA →
+        </button>
       </div>
     </div>
   </div>
@@ -91,8 +382,11 @@ watch(
 .consultar-page {
   min-height: 100vh;
   background: var(--bg-color);
+  color: var(--text-color);
   padding: 2rem;
-  transition: background-color 0.3s ease;
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
 }
 
 .container {
@@ -101,28 +395,28 @@ watch(
 }
 
 .page-header {
-  max-width: 600px;
-  margin: 0 auto 1rem;
-  text-align: center;
   position: relative;
+  text-align: center;
+  margin-bottom: 2rem;
 }
 
 .back-link {
-  display: inline-block;
+  position: absolute;
+  left: 0;
+  top: 0;
+
   color: var(--text-color);
   text-decoration: none;
   font-size: 0.85rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  margin-bottom: 1rem;
+
   border-bottom: 2px solid transparent;
+
   transition:
-    border-color 0.15s,
-    color 0.3s ease;
-  position: absolute;
-  left: 0;
-  top: 0;
+    color 0.3s ease,
+    border-color 0.15s ease;
 }
 
 .back-link:hover {
@@ -132,44 +426,379 @@ watch(
 .page-header h1 {
   color: var(--text-color);
   font-size: 2.5rem;
-  margin: 0;
   font-weight: 900;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  padding-top: 2.5rem;
-  transition: color 0.3s ease;
+  letter-spacing: 0.08em;
+  margin: 0 0 0.75rem;
 }
 
-.loading-message {
-  margin: 2rem auto;
-  max-width: 600px;
-  padding: 1.25rem;
+.subtitle {
+  color: var(--text-color);
+  opacity: 0.7;
+  margin: 0;
+}
+
+.filters {
   border: 2px solid var(--border-color);
   background: var(--card-bg);
   color: var(--text-color);
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
+}
+
+.filters-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.filter-field label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.7;
+}
+
+.filter-field input {
+  padding: 0.65rem 0.85rem;
+  font-size: 0.95rem;
+  border: 2px solid var(--border-color);
+  border-radius: 0;
+  outline: none;
+  background: var(--bg-color);
+  color: var(--text-color);
+  font-family: 'Courier New', monospace;
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.filter-field input::placeholder {
+  color: var(--text-color);
+  opacity: 0.5;
+}
+
+.filter-field input:focus {
+  box-shadow: 4px 4px 0 var(--border-color);
+  transform: translate(-2px, -2px);
+}
+
+.filters-checkboxes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+  margin-top: 1.25rem;
+}
+
+.checkbox-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.checkbox-group__label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.7;
+  margin-right: 0.25rem;
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+}
+
+.checkbox-item input {
+  accent-color: var(--border-color);
+  cursor: pointer;
+}
+
+.filters-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+.filter-button {
+  padding: 0.75rem 1.5rem;
+
+  border: 2px solid var(--border-color);
+
+  background: var(--btn-inverted-bg);
+  color: var(--btn-inverted-text);
+
+  cursor: pointer;
+
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+.filter-button:hover:not(:disabled) {
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  box-shadow: 4px 4px 0 var(--border-color);
+  transform: translate(-2px, -2px);
+}
+
+.filter-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.filter-button--secondary {
+  background: var(--btn-bg);
+  color: var(--btn-text);
+}
+
+.filter-button--secondary:hover:not(:disabled) {
+  background: var(--btn-inverted-bg);
+  color: var(--btn-inverted-text);
+}
+
+.feedback {
+  padding: 1.25rem;
+
+  border: 2px solid var(--border-color);
+
+  background: var(--card-bg);
+  color: var(--text-color);
+
   text-align: center;
+
   font-size: 0.85rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
-.results-section {
+.feedback--error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.retry-button {
+  padding: 0.75rem 1.25rem;
+
+  border: 2px solid var(--border-color);
+
+  background: var(--btn-inverted-bg);
+  color: var(--btn-inverted-text);
+
+  cursor: pointer;
+
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+.retry-button:hover {
+  background: var(--btn-bg);
+  color: var(--btn-text);
+
+  box-shadow: 4px 4px 0 var(--border-color);
+  transform: translate(-2px, -2px);
+}
+
+.table-wrapper {
+  border: 2px solid var(--border-color);
+  overflow-x: auto;
+}
+
+.cnds-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--card-bg);
+  color: var(--text-color);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.cnds-table thead {
+  background: var(--btn-inverted-bg);
+  color: var(--btn-inverted-text);
+}
+
+.cnds-table th {
+  padding: 0.85rem 1rem;
+  text-align: left;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.75rem;
+}
+
+.cnds-table td {
+  padding: 0.85rem 1rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.cnds-table .mono {
+  font-family: 'Courier New', monospace;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.3rem 0.6rem;
+  border: 2px solid var(--border-color);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #fff;
+  background: #6b7280;
+}
+
+.status-badge--regular {
+  background: #22c55e;
+}
+
+.status-badge--irregular {
+  background: #ef4444;
+}
+
+.status-badge--error {
+  background: #ef4444;
+}
+
+.status-badge--expired {
+  background: #f97316;
+}
+
+.file-link {
+  color: var(--text-color);
+  font-weight: 700;
+  text-decoration: underline;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
   margin-top: 2rem;
 }
 
-.cards-container {
-  display: grid;
-  grid-template-columns: repeat(
-    auto-fit,
-    minmax(340px, 1fr)
-  );
-  gap: 1.5rem;
+.pagination-button {
+  padding: 0.75rem 1.25rem;
+
+  border: 2px solid var(--border-color);
+
+  background: var(--btn-bg);
+  color: var(--btn-text);
+
+  cursor: pointer;
+
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+.pagination-button:hover:not(:disabled) {
+  background: var(--btn-inverted-bg);
+  color: var(--btn-inverted-text);
+  box-shadow: 4px 4px 0 var(--border-color);
+  transform: translate(-2px, -2px);
+}
+
+.pagination-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination-info {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+@media (max-width: 900px) {
+  .filters-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 @media (max-width: 768px) {
-  .cards-container {
+  .consultar-page {
+    padding: 1.5rem;
+  }
+
+  .page-header h1 {
+    font-size: 2rem;
+    padding-top: 2.5rem;
+  }
+
+  .back-link {
+    position: static;
+    display: inline-block;
+    margin-bottom: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .consultar-page {
+    padding: 1rem;
+  }
+
+  .filters-grid {
     grid-template-columns: 1fr;
+  }
+
+  .filters-actions {
+    flex-direction: column;
+  }
+
+  .pagination {
+    flex-direction: column;
+    gap: 0.75rem;
   }
 }
 </style>

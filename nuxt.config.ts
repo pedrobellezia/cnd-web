@@ -10,9 +10,10 @@ export default defineNuxtConfig({
   ],
 
   runtimeConfig: {
+    apiBasePath: process.env.API_BASE_PATH || '/fornecedor',
+    apiKey: process.env.CND_API_KEY || '',
     public: {
       apiUrl: process.env.API_URL || 'http://localhost:3030',
-      apiBasePath: process.env.API_BASE_PATH || '/fornecedor',
     },
   },
 })
