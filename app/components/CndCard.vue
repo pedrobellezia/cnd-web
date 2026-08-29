@@ -25,7 +25,7 @@ const getStatusColor = (
   status: string | null,
   validade?: string | null,
 ): string => {
-  if (!status) {
+  if (!status || status === 'error') {
     return 'var(--status-unavailable)'
   }
 
@@ -44,7 +44,7 @@ const getBadgeLabel = (
   status: string | null,
   validade?: string | null,
 ): string => {
-  if (!status || status === 'em desenvolvimento') {
+  if (!status || status === 'em desenvolvimento' || status === 'error') {
     return 'INDISPONÍVEL'
   }
 

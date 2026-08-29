@@ -1,0 +1,16 @@
+services:
+  web:
+    container_name: cnd-web
+    image: cnd-web:latest
+    build: .
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      PORT: 3000
+      HOST: 0.0.0.0
+      # runtimeConfig só aceita override em runtime via env prefixada com NUXT_
+      NUXT_PUBLIC_API_URL: ${API_URL:-http://localhost:3030}
+      NUXT_API_BASE_PATH: ${API_BASE_PATH:-/fornecedor}
+      NUXT_API_KEY: ${CND_API_KEY:-}
+      NUXT_MOCK_API: ${MOCK_API:-true}
+    restart: unless-stopped

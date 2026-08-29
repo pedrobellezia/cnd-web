@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { onMounted, reactive } from 'vue'
+import { computed, onMounted, reactive } from 'vue'
 import { useCnds } from '@/composables/useCnds'
 
 const TIPOS = ['fgts', 'trabalhista', 'estadual', 'municipal']
-const STATUSES = ['regular', 'irregular', 'error']
+const STATUSES = ['regular', 'irregular']
 
 const config = useRuntimeConfig()
 
@@ -102,6 +102,8 @@ const irParaPagina = (novaPagina: number): void => {
   })
 }
 
+const cndsVisiveis = computed(() => cnds.value.filter((cnd) => cnd.status !== 'error'))
+
 onMounted(() => {
   buscarCnds()
 })
@@ -153,46 +155,60 @@ onMounted(() => {
               autocomplete="off"
             />
           </div>
+        </div>
 
-          <div class="filter-field">
-            <label for="filtro-emissao-de">Emissão de</label>
+        <div class="date-ranges">
+          <fieldset class="range-group">
+            <legend>Emissão</legend>
 
-            <input
-              id="filtro-emissao-de"
-              v-model="filtros.emissaoDe"
-              type="date"
-            />
-          </div>
+            <div class="range-group__fields">
+              <div class="filter-field">
+                <label for="filtro-emissao-de">De</label>
 
-          <div class="filter-field">
-            <label for="filtro-emissao-ate">Emissão até</label>
+                <input
+                  id="filtro-emissao-de"
+                  v-model="filtros.emissaoDe"
+                  type="date"
+                />
+              </div>
 
-            <input
-              id="filtro-emissao-ate"
-              v-model="filtros.emissaoAte"
-              type="date"
-            />
-          </div>
+              <div class="filter-field">
+                <label for="filtro-emissao-ate">Até</label>
 
-          <div class="filter-field">
-            <label for="filtro-validade-de">Validade de</label>
+                <input
+                  id="filtro-emissao-ate"
+                  v-model="filtros.emissaoAte"
+                  type="date"
+                />
+              </div>
+            </div>
+          </fieldset>
 
-            <input
-              id="filtro-validade-de"
-              v-model="filtros.validadeDe"
-              type="date"
-            />
-          </div>
+          <fieldset class="range-group">
+            <legend>Validade</legend>
 
-          <div class="filter-field">
-            <label for="filtro-validade-ate">Validade até</label>
+            <div class="range-group__fields">
+              <div class="filter-field">
+                <label for="filtro-validade-de">De</label>
 
-            <input
-              id="filtro-validade-ate"
-              v-model="filtros.validadeAte"
-              type="date"
-            />
-          </div>
+                <input
+                  id="filtro-validade-de"
+                  v-model="filtros.validadeDe"
+                  type="date"
+                />
+              </div>
+
+              <div class="filter-field">
+                <label for="filtro-validade-ate">Até</label>
+
+                <input
+                  id="filtro-validade-ate"
+                  v-model="filtros.validadeAte"
+                  type="date"
+                />
+              </div>
+            </div>
+          </fieldset>
         </div>
 
         <div class="filters-checkboxes">
@@ -276,7 +292,7 @@ onMounted(() => {
       </div>
 
       <div
-        v-else-if="cnds.length === 0"
+        v-else-if="cndsVisiveis.length === 0"
         class="feedback"
       >
         NENHUMA CND ENCONTRADA
@@ -301,7 +317,7 @@ onMounted(() => {
 
           <tbody>
             <tr
-              v-for="(cnd, index) in cnds"
+              v-for="(cnd, index) in cndsVisiveis"
               :key="index"
             >
               <td>{{ cnd.fornecedor.name }}</td>
@@ -318,7 +334,6 @@ onMounted(() => {
                   :class="{
                     'status-badge--regular': cnd.status === 'regular' && !isVencido(cnd.validade),
                     'status-badge--irregular': cnd.status === 'irregular',
-                    'status-badge--error': cnd.status === 'error',
                     'status-badge--expired': cnd.status === 'regular' && isVencido(cnd.validade),
                   }"
                 >
@@ -452,7 +467,35 @@ onMounted(() => {
 
 .filters-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.date-ranges {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.range-group {
+  border: 2px solid var(--border-color);
+  padding: 1rem 1rem 1.25rem;
+  transition: border-color 0.3s ease;
+}
+
+.range-group legend {
+  padding: 0 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-color);
+}
+
+.range-group__fields {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 1rem;
 }
 
@@ -694,10 +737,6 @@ onMounted(() => {
   background: #ef4444;
 }
 
-.status-badge--error {
-  background: #ef4444;
-}
-
 .status-badge--expired {
   background: #f97316;
 }
@@ -760,12 +799,6 @@ onMounted(() => {
   letter-spacing: 0.05em;
 }
 
-@media (max-width: 900px) {
-  .filters-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
 @media (max-width: 768px) {
   .consultar-page {
     padding: 1.5rem;
@@ -789,6 +822,10 @@ onMounted(() => {
   }
 
   .filters-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .date-ranges {
     grid-template-columns: 1fr;
   }
 

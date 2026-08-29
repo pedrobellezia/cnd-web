@@ -1,0 +1,17 @@
+node_modules
+.output
+.nuxt
+.nitro
+.cache
+.data
+dist
+.git
+.gitignore
+Dockerfile
+docker-compose.yaml
+.env
+.env.*
+!.env.example
+.vscode
+.idea
+.fleet
