@@ -2,6 +2,8 @@
 import { onMounted, reactive, ref } from 'vue'
 import { useFornecedores } from '@/composables/useFornecedores'
 import CndModal from '@/components/CndModal.vue'
+import CadastrarFornecedorModal from '@/components/CadastrarFornecedorModal.vue'
+import type { FornecedorPdfData } from '@/composables/useCadastrarFornecedorPdf'
 
 const ESTADOS = [
   'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA',
@@ -33,6 +35,26 @@ const abrirCnds = (cnpj: string): void => {
 
 const fecharCnds = (): void => {
   cnpjSelecionado.value = null
+}
+
+const modalCadastroAberto = ref(false)
+
+const abrirCadastro = (): void => {
+  modalCadastroAberto.value = true
+}
+
+const fecharCadastro = (): void => {
+  modalCadastroAberto.value = false
+}
+
+const onFornecedorCadastrado = (_fornecedores: FornecedorPdfData[]): void => {
+  buscarFornecedores({
+    name: filtros.name,
+    cnpj: filtros.cnpj,
+    uf: filtros.uf,
+    municipio: filtros.municipio,
+    page: 1,
+  })
 }
 
 const formatCNPJ = (value: string): string => {
@@ -102,6 +124,16 @@ onMounted(() => {
           Lista de fornecedores registrados no sistema
         </p>
       </header>
+
+      <div class="page-actions">
+        <button
+          type="button"
+          class="new-fornecedor-button"
+          @click="abrirCadastro"
+        >
+          + CADASTRAR FORNECEDOR
+        </button>
+      </div>
 
       <form
         class="filters"
@@ -309,6 +341,12 @@ onMounted(() => {
       :cnpj="cnpjSelecionado"
       @close="fecharCnds"
     />
+
+    <CadastrarFornecedorModal
+      v-if="modalCadastroAberto"
+      @close="fecharCadastro"
+      @created="onFornecedorCadastrado"
+    />
   </div>
 </template>
 
@@ -370,6 +408,39 @@ onMounted(() => {
   color: var(--text-color);
   opacity: 0.7;
   margin: 0;
+}
+
+.page-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1.5rem;
+}
+
+.new-fornecedor-button {
+  padding: 0.75rem 1.5rem;
+
+  border: 2px solid var(--border-color);
+
+  background: var(--btn-inverted-bg);
+  color: var(--btn-inverted-text);
+
+  cursor: pointer;
+
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+.new-fornecedor-button:hover {
+  box-shadow: 4px 4px 0 var(--border-color);
+  transform: translate(-2px, -2px);
 }
 
 .filters {
@@ -736,6 +807,14 @@ onMounted(() => {
   .pagination {
     flex-direction: column;
     gap: 0.75rem;
+  }
+
+  .page-actions {
+    justify-content: stretch;
+  }
+
+  .new-fornecedor-button {
+    width: 100%;
   }
 }
 </style>
