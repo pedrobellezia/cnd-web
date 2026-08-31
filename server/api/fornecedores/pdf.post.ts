@@ -48,7 +48,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  return await $fetch(`${config.public.apiUrl}${config.apiBasePath}/pdf`, {
+  return await $fetch(`${config.public.apiUrl}/fornecedor/pdf`, {
     method: 'POST',
     body: formData,
     headers: {
