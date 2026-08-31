@@ -14,6 +14,7 @@ export default defineNuxtConfig({
     mockApi: process.env.MOCK_API === 'true',
     public: {
       apiUrl: process.env.API_URL || 'http://localhost:3030',
+      maxFileSizeMb: Number(process.env.MAX_FILE_SIZE_MB) || 10,
     },
   },
 })

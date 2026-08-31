@@ -10,6 +10,7 @@ services:
       HOST: ${HOST:-0.0.0.0}
       # runtimeConfig só aceita override em runtime via env prefixada com NUXT_
       NUXT_PUBLIC_API_URL: ${API_URL:-http://localhost:3030}
+      NUXT_PUBLIC_MAX_FILE_SIZE_MB: ${MAX_FILE_SIZE_MB:-3}
       NUXT_API_KEY: ${CND_API_KEY:-}
       NUXT_MOCK_API: ${MOCK_API:-true}
     restart: unless-stopped

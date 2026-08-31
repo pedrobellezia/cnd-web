@@ -18,8 +18,8 @@ const errorMsg = ref('')
 const resultados = ref<CndResult[] | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024
-const MAX_FILE_SIZE_MB = 10
+const MAX_FILE_SIZE_MB = useRuntimeConfig().public.maxFileSizeMb
+const MAX_FILE_SIZE = MAX_FILE_SIZE_MB * 1024 * 1024
 
 const onFileChange = (event: Event): void => {
   const target = event.target as HTMLInputElement
