@@ -1,6 +1,9 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useCnds } from '@/composables/useCnds'
+import type { Cnd } from '@/composables/useCnds'
+import DownloadFilenameModal from '@/components/DownloadFilenameModal.vue'
+import BulkDownloadModal from '@/components/BulkDownloadModal.vue'
 
 const TIPOS = ['federal', 'fgts', 'trabalhista', 'estadual', 'municipal']
 const STATUSES = ['regular', 'irregular']
@@ -87,12 +90,45 @@ const getFileUrl = (fileName: string | null): string => {
   return `${config.public.apiUrl}/public/${fileName}`
 }
 
+const downloadFile = async (fileName: string, downloadName: string) => {
+  const response = await fetch(getFileUrl(fileName))
+  const blob = await response.blob()
+  const url = URL.createObjectURL(blob)
+
+  const link = document.createElement('a')
+  link.href = url
+  link.download = downloadName
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
+}
+
+const cndParaDownload = ref<Cnd | null>(null)
+
+const abrirModalDownload = (cnd: Cnd) => {
+  cndParaDownload.value = cnd
+}
+
+const fecharModalDownload = () => {
+  cndParaDownload.value = null
+}
+
+const confirmarDownload = async (fileName: string) => {
+  const cnd = cndParaDownload.value
+  if (!cnd?.file_name) return
+
+  fecharModalDownload()
+  await downloadFile(cnd.file_name, fileName)
+}
+
 const aplicarFiltros = (): void => {
   filtros.name = filtros.name.trim()
   filtros.cnpj = filtros.cnpj.trim()
 
   Object.assign(filtrosAplicados, snapshotFiltros(filtros))
 
+  limparSelecao()
   buscarCnds({ ...snapshotFiltros(filtrosAplicados), page: 1 })
 }
 
@@ -108,14 +144,71 @@ const limparFiltros = (): void => {
 
   Object.assign(filtrosAplicados, snapshotFiltros(filtros))
 
+  limparSelecao()
   buscarCnds({ page: 1 })
 }
 
 const irParaPagina = (novaPagina: number): void => {
+  limparSelecao()
   buscarCnds({ ...snapshotFiltros(filtrosAplicados), page: novaPagina })
 }
 
 const cndsVisiveis = computed(() => cnds.value.filter((cnd) => cnd.status !== 'error'))
+
+const selecionados = reactive(new Set<string>())
+
+const cndsSelecionaveis = computed(() => cndsVisiveis.value.filter((cnd) => cnd.file_name))
+
+const todosSelecionados = computed(
+  () => cndsSelecionaveis.value.length > 0 && cndsSelecionaveis.value.every((cnd) => selecionados.has(cnd.file_name as string)),
+)
+
+const algunsSelecionados = computed(
+  () => !todosSelecionados.value && cndsSelecionaveis.value.some((cnd) => selecionados.has(cnd.file_name as string)),
+)
+
+const selecaoCheckboxRef = ref<HTMLInputElement | null>(null)
+
+watch(algunsSelecionados, (valor) => {
+  if (selecaoCheckboxRef.value) selecaoCheckboxRef.value.indeterminate = valor
+})
+
+const alternarSelecaoTodos = (): void => {
+  if (todosSelecionados.value) {
+    for (const cnd of cndsSelecionaveis.value) selecionados.delete(cnd.file_name as string)
+  } else {
+    for (const cnd of cndsSelecionaveis.value) selecionados.add(cnd.file_name as string)
+  }
+}
+
+const alternarSelecao = (fileName: string): void => {
+  if (selecionados.has(fileName)) {
+    selecionados.delete(fileName)
+  } else {
+    selecionados.add(fileName)
+  }
+}
+
+const cndsSelecionadas = computed(() =>
+  cndsVisiveis.value.filter((cnd) => cnd.file_name && selecionados.has(cnd.file_name)),
+)
+
+const limparSelecao = (): void => {
+  selecionados.clear()
+}
+
+const modalDownloadEmMassaAberto = ref(false)
+
+const confirmarDownloadEmMassa = async (itens: { cnd: Cnd; fileName: string }[]) => {
+  modalDownloadEmMassaAberto.value = false
+  limparSelecao()
+
+  for (const item of itens) {
+    if (!item.cnd.file_name) continue
+    await downloadFile(item.cnd.file_name, item.fileName)
+    await new Promise((resolve) => setTimeout(resolve, 300))
+  }
+}
 
 interface FiltroAtivo {
   key: string
@@ -381,11 +474,36 @@ onMounted(() => {
 
       <div
         v-else
-        class="table-wrapper"
+        class="table-section"
       >
-        <table class="cnds-table">
+        <div class="bulk-actions">
+          <span class="bulk-actions__info">
+            {{ cndsSelecionadas.length > 0 ? `${cndsSelecionadas.length} SELECIONADA${cndsSelecionadas.length > 1 ? 'S' : ''}` : 'NENHUMA CND SELECIONADA' }}
+          </span>
+
+          <button
+            type="button"
+            class="download-selected-button"
+            :disabled="cndsSelecionadas.length === 0"
+            @click="modalDownloadEmMassaAberto = true"
+          >
+            BAIXAR SELECIONADAS
+          </button>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="cnds-table">
           <thead>
             <tr>
+              <th class="checkbox-cell">
+                <input
+                  ref="selecaoCheckboxRef"
+                  type="checkbox"
+                  :checked="todosSelecionados"
+                  aria-label="Selecionar todas as CNDs"
+                  @change="alternarSelecaoTodos"
+                >
+              </th>
               <th>Fornecedor</th>
               <th>CNPJ</th>
               <th>Tipo</th>
@@ -393,6 +511,7 @@ onMounted(() => {
               <th>Emissão</th>
               <th>Validade</th>
               <th>Arquivo</th>
+              <th>Download</th>
             </tr>
           </thead>
 
@@ -401,6 +520,19 @@ onMounted(() => {
               v-for="(cnd, index) in cndsVisiveis"
               :key="index"
             >
+              <td
+                class="checkbox-cell"
+                data-label="Selecionar"
+              >
+                <input
+                  v-if="cnd.file_name"
+                  type="checkbox"
+                  :checked="selecionados.has(cnd.file_name)"
+                  :aria-label="`Selecionar CND de ${cnd.fornecedor.name}`"
+                  @change="alternarSelecao(cnd.file_name)"
+                >
+              </td>
+
               <td data-label="Fornecedor">{{ cnd.fornecedor.name }}</td>
 
               <td
@@ -442,9 +574,23 @@ onMounted(() => {
 
                 <span v-else>-</span>
               </td>
+
+              <td data-label="Download">
+                <button
+                  v-if="cnd.file_name"
+                  type="button"
+                  class="download-button"
+                  @click="abrirModalDownload(cnd)"
+                >
+                  BAIXAR
+                </button>
+
+                <span v-else>-</span>
+              </td>
             </tr>
           </tbody>
         </table>
+        </div>
       </div>
 
       <div
@@ -474,6 +620,20 @@ onMounted(() => {
         </button>
       </div>
     </div>
+
+    <DownloadFilenameModal
+      v-if="cndParaDownload"
+      :cnd="cndParaDownload"
+      @close="fecharModalDownload"
+      @confirm="confirmarDownload"
+    />
+
+    <BulkDownloadModal
+      v-if="modalDownloadEmMassaAberto"
+      :cnds="cndsSelecionadas"
+      @close="modalDownloadEmMassaAberto = false"
+      @confirm="confirmarDownloadEmMassa"
+    />
   </div>
 </template>
 
@@ -489,7 +649,7 @@ onMounted(() => {
 }
 
 .container {
-  max-width: 1200px;
+  max-width: 1360px;
   margin: 0 auto;
 }
 
@@ -809,6 +969,72 @@ onMounted(() => {
   transform: translate(-2px, -2px);
 }
 
+.table-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.bulk-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.bulk-actions__info {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  opacity: 0.75;
+}
+
+.download-selected-button {
+  padding: 0.75rem 1.5rem;
+
+  border: 2px solid var(--border-color);
+
+  background: var(--btn-inverted-bg);
+  color: var(--btn-inverted-text);
+
+  cursor: pointer;
+  white-space: nowrap;
+
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+.download-selected-button:hover:not(:disabled) {
+  box-shadow: 4px 4px 0 var(--border-color);
+  transform: translate(-2px, -2px);
+}
+
+.download-selected-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.checkbox-cell {
+  width: 2.5rem;
+  text-align: center;
+}
+
+.checkbox-cell input[type='checkbox'] {
+  width: 1.05rem;
+  height: 1.05rem;
+  accent-color: var(--btn-inverted-bg);
+  cursor: pointer;
+}
+
 .table-wrapper {
   border: 2px solid var(--border-color);
   overflow-x: auto;
@@ -877,6 +1103,31 @@ onMounted(() => {
   text-transform: uppercase;
   font-size: 0.75rem;
   letter-spacing: 0.05em;
+}
+
+.download-button {
+  padding: 0.4rem 0.75rem;
+
+  border: 2px solid var(--border-color);
+
+  background: var(--btn-bg);
+  color: var(--btn-text);
+
+  cursor: pointer;
+
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.download-button:hover {
+  background: var(--btn-inverted-bg);
+  color: var(--btn-inverted-text);
 }
 
 .pagination {

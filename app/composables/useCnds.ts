@@ -1,4 +1,4 @@
-interface Cnd {
+export interface Cnd {
   file_name: string | null
   validade: string | null
   emissao: string | null
