@@ -14,7 +14,7 @@ export default defineEventHandler(async (event) => {
     const page = Number(query.page) || 1
     const limit = Number(query.limit) || 20
     const cnpjFiltro = toArray(query.cnpj)
-    const statusFiltro = toArray(query.status)
+    const statusFiltro = toArray(query.status) ?? ['irregular', 'regular']
     const tipoFiltro = toArray(query.tipo)
 
     const rows = mockFornecedores.flatMap((f) =>
