@@ -269,8 +269,6 @@ const confirmar = () => {
 }
 
 .modal-close:hover {
-  background: var(--btn-inverted-bg);
-  color: var(--btn-inverted-text);
   box-shadow: 4px 4px 0 var(--border-color);
   transform: translate(-2px, -2px);
 }
@@ -424,6 +422,8 @@ const confirmar = () => {
 }
 
 .btn-primary:hover {
+  background: var(--btn-bg);
+  color: var(--btn-text);
   box-shadow: 4px 4px 0 var(--border-color);
   transform: translate(-2px, -2px);
 }

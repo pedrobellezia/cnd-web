@@ -879,11 +879,6 @@ onMounted(() => {
   color: var(--btn-text);
 }
 
-.filter-button--secondary:hover:not(:disabled) {
-  background: var(--btn-inverted-bg);
-  color: var(--btn-inverted-text);
-}
-
 .active-filters {
   display: flex;
   flex-wrap: wrap;
@@ -1036,6 +1031,8 @@ onMounted(() => {
 }
 
 .download-selected-button:hover:not(:disabled) {
+  background: var(--btn-bg);
+  color: var(--btn-text);
   box-shadow: 4px 4px 0 var(--border-color);
   transform: translate(-2px, -2px);
 }
@@ -1183,8 +1180,6 @@ onMounted(() => {
 }
 
 .pagination-button:hover:not(:disabled) {
-  background: var(--btn-inverted-bg);
-  color: var(--btn-inverted-text);
   box-shadow: 4px 4px 0 var(--border-color);
   transform: translate(-2px, -2px);
 }

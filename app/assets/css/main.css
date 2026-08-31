@@ -18,8 +18,6 @@
   --btn-inverted-bg: #000000;
   --btn-inverted-text: #ffffff;
   --drop-zone-bg: #ffffff;
-  --drop-zone-hover-bg: #000000;
-  --drop-zone-hover-text: #ffffff;
   
   --color-error: #ef4444;
   --color-success: #22c55e;
@@ -42,8 +40,6 @@
   --btn-inverted-bg: #ffffff;
   --btn-inverted-text: #121212;
   --drop-zone-bg: #1e1e1e;
-  --drop-zone-hover-bg: #ffffff;
-  --drop-zone-hover-text: #121212;
   
   --color-error: #f87171;
   --color-success: #4ade80;

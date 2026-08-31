@@ -364,8 +364,6 @@ onBeforeUnmount(() => {
 }
 
 .modal-close:hover {
-  background: var(--btn-inverted-bg);
-  color: var(--btn-inverted-text);
   box-shadow: 4px 4px 0 var(--border-color);
   transform: translate(-2px, -2px);
 }
@@ -401,8 +399,6 @@ onBeforeUnmount(() => {
 
 .drop-zone:hover:not(.drop-zone--disabled),
 .drop-zone--active {
-  background: var(--drop-zone-hover-bg);
-  color: var(--drop-zone-hover-text);
   box-shadow: 6px 6px 0 var(--border-color);
   transform: translate(-3px, -3px);
 }
@@ -612,6 +608,8 @@ onBeforeUnmount(() => {
 }
 
 .btn-primary:hover:not(:disabled) {
+  background: var(--btn-bg);
+  color: var(--btn-text);
   box-shadow: 4px 4px 0 var(--border-color);
   transform: translate(-2px, -2px);
 }

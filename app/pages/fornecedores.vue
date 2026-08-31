@@ -439,6 +439,8 @@ onMounted(() => {
 }
 
 .new-fornecedor-button:hover {
+  background: var(--btn-bg);
+  color: var(--btn-text);
   box-shadow: 4px 4px 0 var(--border-color);
   transform: translate(-2px, -2px);
 }
@@ -548,11 +550,6 @@ onMounted(() => {
   color: var(--btn-text);
 }
 
-.filter-button--secondary:hover:not(:disabled) {
-  background: var(--btn-inverted-bg);
-  color: var(--btn-inverted-text);
-}
-
 .pagination {
   display: flex;
   align-items: center;
@@ -584,8 +581,6 @@ onMounted(() => {
 }
 
 .pagination-button:hover:not(:disabled) {
-  background: var(--btn-inverted-bg);
-  color: var(--btn-inverted-text);
   box-shadow: 4px 4px 0 var(--border-color);
   transform: translate(-2px, -2px);
 }

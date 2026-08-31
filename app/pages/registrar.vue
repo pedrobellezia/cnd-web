@@ -388,8 +388,6 @@ const openFileDialog = (): void => {
 
 .drop-zone:hover,
 .drop-zone--active {
-  background: var(--drop-zone-hover-bg);
-  color: var(--drop-zone-hover-text);
   box-shadow: 6px 6px 0 var(--border-color);
   transform: translate(-3px, -3px);
 }
