@@ -198,15 +198,37 @@ const limparSelecao = (): void => {
 }
 
 const modalDownloadEmMassaAberto = ref(false)
+const baixandoZip = ref(false)
 
 const confirmarDownloadEmMassa = async (itens: { cnd: Cnd; fileName: string }[]) => {
   modalDownloadEmMassaAberto.value = false
   limparSelecao()
 
-  for (const item of itens) {
-    if (!item.cnd.file_name) continue
-    await downloadFile(item.cnd.file_name, item.fileName)
-    await new Promise((resolve) => setTimeout(resolve, 300))
+  const items = itens
+    .filter((item) => item.cnd.file_name)
+    .map((item) => ({ sourceFileName: item.cnd.file_name as string, downloadName: item.fileName }))
+
+  if (items.length === 0) return
+
+  baixandoZip.value = true
+
+  try {
+    const blob = await $fetch<Blob>('/api/cnds/zip', {
+      method: 'POST',
+      body: { items },
+      responseType: 'blob',
+    })
+
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = 'cnds.zip'
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+  } finally {
+    baixandoZip.value = false
   }
 }
 
@@ -484,10 +506,10 @@ onMounted(() => {
           <button
             type="button"
             class="download-selected-button"
-            :disabled="cndsSelecionadas.length === 0"
+            :disabled="cndsSelecionadas.length === 0 || baixandoZip"
             @click="modalDownloadEmMassaAberto = true"
           >
-            BAIXAR SELECIONADAS
+            {{ baixandoZip ? 'GERANDO ZIP...' : 'BAIXAR SELECIONADAS' }}
           </button>
         </div>
 
