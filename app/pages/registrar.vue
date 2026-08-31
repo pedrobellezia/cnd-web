@@ -13,8 +13,9 @@ interface CndResult {
 
 const files = ref<File[]>([])
 const isDragging = ref(false)
-const status = ref<'idle' | 'loading' | 'success' | 'error'>('idle')
+const status = ref<'idle' | 'loading' | 'error'>('idle')
 const errorMsg = ref('')
+const resultados = ref<CndResult[] | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024
@@ -71,6 +72,7 @@ const addFiles = (fileList: FileList): void => {
     if (!existing.has(key)) {
       files.value.push(file)
       existing.add(key)
+      resultados.value = null
     }
   }
 
@@ -103,11 +105,14 @@ const formatSize = (bytes: number): string => {
 }
 
 const getErrorMessage = (error: CndError | undefined): string => {
-  if (!error) {
-    return 'Erro desconhecido'
+  // Só exibe a mensagem do backend para resultados de análise do documento
+  // (ex.: não identificado como CND, CND vencida). Outros tipos de erro
+  // (falhas internas, de rede, de serviços externos) usam uma mensagem genérica
+  // para não vazar detalhes de implementação ao usuário.
+  if (error?.type === 'ANALYSIS_ERROR' && error.message) {
+    return error.message
   }
-
-  return error.message || 'Erro ao processar o documento'
+  return 'Erro ao processar o documento'
 }
 
 const enviar = async (): Promise<void> => {
@@ -117,6 +122,7 @@ const enviar = async (): Promise<void> => {
 
   status.value = 'loading'
   errorMsg.value = ''
+  resultados.value = null
 
   const formData = new FormData()
 
@@ -133,41 +139,15 @@ const enviar = async (): Promise<void> => {
       },
     )
 
-    const successes = results.filter((result) => result.success)
-    const failures = results.filter((result) => !result.success)
+    resultados.value = results
 
-    if (failures.length === 0) {
-      status.value = 'success'
-      files.value = []
-      return
-    }
+    const successNames = new Set(
+      results.filter((result) => result.success).map((result) => result.file),
+    )
 
-    const errorDetails = failures
-      .map((failure) => {
-        return `• ${failure.file}: ${getErrorMessage(failure.error)}`
-      })
-      .join('\n')
+    files.value = files.value.filter((file) => !successNames.has(file.name))
 
-    if (successes.length > 0) {
-      const successNames = new Set(
-        successes.map((success) => success.file),
-      )
-
-      files.value = files.value.filter(
-        (file) => !successNames.has(file.name),
-      )
-
-      status.value = 'error'
-      errorMsg.value =
-        `Alguns documentos foram processados com sucesso, ` +
-        `mas outros falharam:\n${errorDetails}`
-
-      return
-    }
-
-    status.value = 'error'
-    errorMsg.value =
-      `Todos os documentos falharam no processamento:\n${errorDetails}`
+    status.value = 'idle'
   } catch (err: unknown) {
     status.value = 'error'
 
@@ -264,23 +244,6 @@ const openFileDialog = (): void => {
       </div>
 
       <div
-        v-if="status === 'success'"
-        class="feedback feedback--success"
-      >
-        <span>
-          DOCUMENTOS ENVIADOS COM SUCESSO
-        </span>
-
-        <button
-          type="button"
-          class="feedback__close"
-          @click="resetStatus"
-        >
-          ✕
-        </button>
-      </div>
-
-      <div
         v-if="status === 'error'"
         class="feedback feedback--error"
       >
@@ -295,6 +258,28 @@ const openFileDialog = (): void => {
         >
           ✕
         </button>
+      </div>
+
+      <div
+        v-if="resultados"
+        class="results"
+      >
+        <div
+          v-for="(resultado, index) in resultados"
+          :key="`${resultado.file}-${index}`"
+          class="result-item"
+          :class="resultado.success ? 'result-item--success' : 'result-item--error'"
+        >
+          <span class="result-item__icon">{{ resultado.success ? '✓' : '✕' }}</span>
+
+          <div class="result-item__body">
+            <span class="result-item__file">{{ resultado.file }}</span>
+
+            <span class="result-item__detail">
+              {{ resultado.success ? 'Enviado com sucesso' : getErrorMessage(resultado.error) }}
+            </span>
+          </div>
+        </div>
       </div>
 
       <button
@@ -533,6 +518,59 @@ const openFileDialog = (): void => {
   padding: 0 0.25rem;
   flex-shrink: 0;
   color: inherit;
+}
+
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.result-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border: 2px solid var(--border-color);
+}
+
+.result-item__icon {
+  flex-shrink: 0;
+  width: 1.6rem;
+  height: 1.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 0.9rem;
+}
+
+.result-item--success .result-item__icon {
+  color: var(--color-success);
+  border: 2px solid var(--color-success);
+}
+
+.result-item--error .result-item__icon {
+  color: var(--color-error);
+  border: 2px solid var(--color-error);
+}
+
+.result-item__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.result-item__file {
+  font-size: 0.82rem;
+  font-family: 'Courier New', monospace;
+  word-break: break-all;
+}
+
+.result-item__detail {
+  font-size: 0.8rem;
+  opacity: 0.75;
 }
 
 /* Submit Button */
