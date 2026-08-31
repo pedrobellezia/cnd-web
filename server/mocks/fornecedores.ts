@@ -1,4 +1,4 @@
-export const cndTypes = ['fgts', 'trabalhista', 'estadual', 'municipal'] as const
+export const cndTypes = ['federal', 'fgts', 'trabalhista', 'estadual', 'municipal'] as const
 
 export interface MockCnd {
   tipo: string
@@ -39,6 +39,7 @@ export const mockFornecedores: MockFornecedor[] = [
     uf: 'SP',
     municipio: 'SAO PAULO',
     cnd: [
+      cnd('federal', 'em desenvolvimento', null),
       cnd('fgts', 'regular', 25),
       cnd('trabalhista', 'regular', 90),
       cnd('estadual', 'irregular', null),
@@ -51,6 +52,7 @@ export const mockFornecedores: MockFornecedor[] = [
     uf: 'RJ',
     municipio: 'RIO DE JANEIRO',
     cnd: [
+      cnd('federal', 'em desenvolvimento', null),
       cnd('fgts', 'regular', 3),
       cnd('trabalhista', 'error', null),
       cnd('estadual', 'em desenvolvimento', null),
@@ -63,6 +65,7 @@ export const mockFornecedores: MockFornecedor[] = [
     uf: 'MG',
     municipio: 'BELO HORIZONTE',
     cnd: [
+      cnd('federal', 'em desenvolvimento', null),
       cnd('fgts', 'irregular', null),
       cnd('trabalhista', 'regular', 60),
       cnd('estadual', 'regular', 10),
@@ -75,6 +78,7 @@ export const mockFornecedores: MockFornecedor[] = [
     uf: 'PR',
     municipio: 'CURITIBA',
     cnd: [
+      cnd('federal', 'em desenvolvimento', null),
       cnd('fgts', 'regular', 120),
       cnd('trabalhista', 'regular', 45),
       cnd('estadual', 'regular', 8),
@@ -87,6 +91,7 @@ export const mockFornecedores: MockFornecedor[] = [
     uf: 'RS',
     municipio: 'PORTO ALEGRE',
     cnd: [
+      cnd('federal', 'em desenvolvimento', null),
       cnd('fgts', 'error', null),
       cnd('trabalhista', 'error', null),
       cnd('estadual', 'irregular', null),
@@ -99,6 +104,7 @@ export const mockFornecedores: MockFornecedor[] = [
     uf: 'SP',
     municipio: 'CAMPINAS',
     cnd: [
+      cnd('federal', 'em desenvolvimento', null),
       cnd('fgts', 'regular', 12),
       cnd('trabalhista', 'regular', 12),
       cnd('estadual', 'regular', 12),

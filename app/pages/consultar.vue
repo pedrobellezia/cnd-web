@@ -2,7 +2,7 @@
 import { computed, onMounted, reactive } from 'vue'
 import { useCnds } from '@/composables/useCnds'
 
-const TIPOS = ['fgts', 'trabalhista', 'estadual', 'municipal']
+const TIPOS = ['federal', 'fgts', 'trabalhista', 'estadual', 'municipal']
 const STATUSES = ['regular', 'irregular']
 
 const config = useRuntimeConfig()
@@ -26,6 +26,32 @@ const filtros = reactive({
   validadeDe: '',
   validadeAte: '',
 })
+
+// snapshot do que foi de fato submetido - só muda ao clicar em Filtrar/Limpar
+// ou ao remover um chip; edições no formulário não devem refletir aqui antes disso
+const filtrosAplicados = reactive({
+  name: '',
+  cnpj: '',
+  status: [] as string[],
+  tipo: [] as string[],
+  emissaoDe: '',
+  emissaoAte: '',
+  validadeDe: '',
+  validadeAte: '',
+})
+
+function snapshotFiltros(source: typeof filtros) {
+  return {
+    name: source.name,
+    cnpj: source.cnpj,
+    status: [...source.status],
+    tipo: [...source.tipo],
+    emissaoDe: source.emissaoDe,
+    emissaoAte: source.emissaoAte,
+    validadeDe: source.validadeDe,
+    validadeAte: source.validadeAte,
+  }
+}
 
 const formatCNPJ = (value: string): string => {
   const numbers = value.replace(/\D/g, '').slice(0, 14)
@@ -62,17 +88,12 @@ const getFileUrl = (fileName: string | null): string => {
 }
 
 const aplicarFiltros = (): void => {
-  buscarCnds({
-    name: filtros.name,
-    cnpj: filtros.cnpj,
-    status: filtros.status,
-    tipo: filtros.tipo,
-    emissaoDe: filtros.emissaoDe,
-    emissaoAte: filtros.emissaoAte,
-    validadeDe: filtros.validadeDe,
-    validadeAte: filtros.validadeAte,
-    page: 1,
-  })
+  filtros.name = filtros.name.trim()
+  filtros.cnpj = filtros.cnpj.trim()
+
+  Object.assign(filtrosAplicados, snapshotFiltros(filtros))
+
+  buscarCnds({ ...snapshotFiltros(filtrosAplicados), page: 1 })
 }
 
 const limparFiltros = (): void => {
@@ -85,24 +106,62 @@ const limparFiltros = (): void => {
   filtros.validadeDe = ''
   filtros.validadeAte = ''
 
+  Object.assign(filtrosAplicados, snapshotFiltros(filtros))
+
   buscarCnds({ page: 1 })
 }
 
 const irParaPagina = (novaPagina: number): void => {
-  buscarCnds({
-    name: filtros.name,
-    cnpj: filtros.cnpj,
-    status: filtros.status,
-    tipo: filtros.tipo,
-    emissaoDe: filtros.emissaoDe,
-    emissaoAte: filtros.emissaoAte,
-    validadeDe: filtros.validadeDe,
-    validadeAte: filtros.validadeAte,
-    page: novaPagina,
-  })
+  buscarCnds({ ...snapshotFiltros(filtrosAplicados), page: novaPagina })
 }
 
 const cndsVisiveis = computed(() => cnds.value.filter((cnd) => cnd.status !== 'error'))
+
+interface FiltroAtivo {
+  key: string
+  label: string
+}
+
+const filtrosAtivos = computed<FiltroAtivo[]>(() => {
+  const chips: FiltroAtivo[] = []
+
+  if (filtrosAplicados.name) chips.push({ key: 'name', label: `Fornecedor: ${filtrosAplicados.name}` })
+  if (filtrosAplicados.cnpj) chips.push({ key: 'cnpj', label: `CNPJ: ${filtrosAplicados.cnpj}` })
+
+  for (const tipo of filtrosAplicados.tipo) {
+    chips.push({ key: `tipo:${tipo}`, label: `Tipo: ${tipo.toUpperCase()}` })
+  }
+
+  for (const status of filtrosAplicados.status) {
+    chips.push({ key: `status:${status}`, label: `Status: ${status.toUpperCase()}` })
+  }
+
+  if (filtrosAplicados.emissaoDe) chips.push({ key: 'emissaoDe', label: `Emissão de: ${formatDate(filtrosAplicados.emissaoDe)}` })
+  if (filtrosAplicados.emissaoAte) chips.push({ key: 'emissaoAte', label: `Emissão até: ${formatDate(filtrosAplicados.emissaoAte)}` })
+  if (filtrosAplicados.validadeDe) chips.push({ key: 'validadeDe', label: `Validade de: ${formatDate(filtrosAplicados.validadeDe)}` })
+  if (filtrosAplicados.validadeAte) chips.push({ key: 'validadeAte', label: `Validade até: ${formatDate(filtrosAplicados.validadeAte)}` })
+
+  return chips
+})
+
+const removerFiltro = (key: string): void => {
+  if (key.startsWith('tipo:')) {
+    filtros.tipo = filtros.tipo.filter((tipo) => tipo !== key.slice('tipo:'.length))
+  } else if (key.startsWith('status:')) {
+    filtros.status = filtros.status.filter((status) => status !== key.slice('status:'.length))
+  } else if (
+    key === 'name' ||
+    key === 'cnpj' ||
+    key === 'emissaoDe' ||
+    key === 'emissaoAte' ||
+    key === 'validadeDe' ||
+    key === 'validadeAte'
+  ) {
+    filtros[key] = ''
+  }
+
+  aplicarFiltros()
+}
 
 onMounted(() => {
   buscarCnds()
@@ -158,7 +217,7 @@ onMounted(() => {
         </div>
 
         <div class="date-ranges">
-          <fieldset class="range-group">
+          <fieldset class="filter-group">
             <legend>Emissão</legend>
 
             <div class="range-group__fields">
@@ -184,7 +243,7 @@ onMounted(() => {
             </div>
           </fieldset>
 
-          <fieldset class="range-group">
+          <fieldset class="filter-group">
             <legend>Validade</legend>
 
             <div class="range-group__fields">
@@ -212,41 +271,45 @@ onMounted(() => {
         </div>
 
         <div class="filters-checkboxes">
-          <div class="checkbox-group">
-            <span class="checkbox-group__label">Tipo</span>
+          <fieldset class="filter-group">
+            <legend>Tipo</legend>
 
-            <label
-              v-for="tipo in TIPOS"
-              :key="tipo"
-              class="checkbox-item"
-            >
-              <input
-                v-model="filtros.tipo"
-                type="checkbox"
-                :value="tipo"
-              />
+            <div class="checkbox-group__items">
+              <label
+                v-for="tipo in TIPOS"
+                :key="tipo"
+                class="checkbox-item"
+              >
+                <input
+                  v-model="filtros.tipo"
+                  type="checkbox"
+                  :value="tipo"
+                />
 
-              {{ tipo.toUpperCase() }}
-            </label>
-          </div>
+                {{ tipo.toUpperCase() }}
+              </label>
+            </div>
+          </fieldset>
 
-          <div class="checkbox-group">
-            <span class="checkbox-group__label">Status</span>
+          <fieldset class="filter-group">
+            <legend>Status</legend>
 
-            <label
-              v-for="status in STATUSES"
-              :key="status"
-              class="checkbox-item"
-            >
-              <input
-                v-model="filtros.status"
-                type="checkbox"
-                :value="status"
-              />
+            <div class="checkbox-group__items">
+              <label
+                v-for="status in STATUSES"
+                :key="status"
+                class="checkbox-item"
+              >
+                <input
+                  v-model="filtros.status"
+                  type="checkbox"
+                  :value="status"
+                />
 
-              {{ status.toUpperCase() }}
-            </label>
-          </div>
+                {{ status.toUpperCase() }}
+              </label>
+            </div>
+          </fieldset>
         </div>
 
         <div class="filters-actions">
@@ -268,6 +331,24 @@ onMounted(() => {
           </button>
         </div>
       </form>
+
+      <div
+        v-if="filtrosAtivos.length > 0"
+        class="active-filters"
+      >
+        <span class="active-filters__label">Filtros ativos:</span>
+
+        <button
+          v-for="chip in filtrosAtivos"
+          :key="chip.key"
+          type="button"
+          class="filter-chip"
+          @click="removerFiltro(chip.key)"
+        >
+          {{ chip.label }}
+          <span class="filter-chip__remove">×</span>
+        </button>
+      </div>
 
       <div
         v-if="loading"
@@ -320,15 +401,18 @@ onMounted(() => {
               v-for="(cnd, index) in cndsVisiveis"
               :key="index"
             >
-              <td>{{ cnd.fornecedor.name }}</td>
+              <td data-label="Fornecedor">{{ cnd.fornecedor.name }}</td>
 
-              <td class="mono">
+              <td
+                class="mono"
+                data-label="CNPJ"
+              >
                 {{ formatCNPJ(cnd.fornecedor.cnpj) }}
               </td>
 
-              <td>{{ cnd.cndtype?.name?.toUpperCase() || '-' }}</td>
+              <td data-label="Tipo">{{ cnd.cndtype?.name?.toUpperCase() || '-' }}</td>
 
-              <td>
+              <td data-label="Status">
                 <span
                   class="status-badge"
                   :class="{
@@ -341,11 +425,11 @@ onMounted(() => {
                 </span>
               </td>
 
-              <td>{{ formatDate(cnd.emissao) }}</td>
+              <td data-label="Emissão">{{ formatDate(cnd.emissao) }}</td>
 
-              <td>{{ formatDate(cnd.validade) }}</td>
+              <td data-label="Validade">{{ formatDate(cnd.validade) }}</td>
 
-              <td>
+              <td data-label="Arquivo">
                 <a
                   v-if="cnd.file_name"
                   :href="getFileUrl(cnd.file_name)"
@@ -478,13 +562,13 @@ onMounted(() => {
   margin-top: 1rem;
 }
 
-.range-group {
+.filter-group {
   border: 2px solid var(--border-color);
   padding: 1rem 1rem 1.25rem;
   transition: border-color 0.3s ease;
 }
 
-.range-group legend {
+.filter-group legend {
   padding: 0 0.5rem;
   font-size: 0.75rem;
   font-weight: 700;
@@ -542,24 +626,15 @@ onMounted(() => {
 .filters-checkboxes {
   display: flex;
   flex-wrap: wrap;
-  gap: 2rem;
-  margin-top: 1.25rem;
+  gap: 1rem;
+  margin-top: 1rem;
 }
 
-.checkbox-group {
+.checkbox-group__items {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
   gap: 0.75rem;
-}
-
-.checkbox-group__label {
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  opacity: 0.7;
-  margin-right: 0.25rem;
+  margin-top: 0.5rem;
 }
 
 .checkbox-item {
@@ -625,6 +700,60 @@ onMounted(() => {
 .filter-button--secondary:hover:not(:disabled) {
   background: var(--btn-inverted-bg);
   color: var(--btn-inverted-text);
+}
+
+.active-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.active-filters__label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.7;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+
+  padding: 0.35rem 0.7rem;
+
+  border: 2px solid var(--border-color);
+
+  background: var(--btn-inverted-bg);
+  color: var(--btn-inverted-text);
+
+  cursor: pointer;
+
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+.filter-chip:hover {
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  box-shadow: 3px 3px 0 var(--border-color);
+  transform: translate(-1px, -1px);
+}
+
+.filter-chip__remove {
+  font-size: 0.9rem;
+  line-height: 1;
 }
 
 .feedback {
@@ -726,19 +855,19 @@ onMounted(() => {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: #fff;
-  background: #6b7280;
+  background: var(--color-neutral);
 }
 
 .status-badge--regular {
-  background: #22c55e;
+  background: var(--color-success);
 }
 
 .status-badge--irregular {
-  background: #ef4444;
+  background: var(--color-error);
 }
 
 .status-badge--expired {
-  background: #f97316;
+  background: var(--color-warning);
 }
 
 .file-link {
@@ -797,6 +926,56 @@ onMounted(() => {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
+@media (max-width: 700px) {
+  .table-wrapper {
+    border: none;
+    overflow-x: visible;
+  }
+
+  .cnds-table,
+  .cnds-table tbody,
+  .cnds-table tr,
+  .cnds-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .cnds-table thead {
+    display: none;
+  }
+
+  .cnds-table tr {
+    border: 2px solid var(--border-color);
+    margin-bottom: 1rem;
+  }
+
+  .cnds-table td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.65rem 1rem;
+    border-top: none;
+    border-bottom: 1px solid var(--border-color);
+    white-space: normal;
+    text-align: right;
+  }
+
+  .cnds-table tr td:last-child {
+    border-bottom: none;
+  }
+
+  .cnds-table td::before {
+    content: attr(data-label);
+    text-align: left;
+    opacity: 0.7;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
 }
 
 @media (max-width: 768px) {

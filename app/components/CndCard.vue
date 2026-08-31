@@ -26,18 +26,18 @@ const getStatusColor = (
   validade?: string | null,
 ): string => {
   if (!status || status === 'error') {
-    return 'var(--status-unavailable)'
+    return 'var(--color-neutral)'
   }
 
   if (validade && isVencido(validade)) {
-    return 'var(--status-expired)'
+    return 'var(--color-warning)'
   }
 
   if (status === 'regular') {
-    return 'var(--status-regular)'
+    return 'var(--color-success)'
   }
 
-  return 'var(--status-irregular)'
+  return 'var(--color-error)'
 }
 
 const getBadgeLabel = (
@@ -314,12 +314,5 @@ const getFileUrl = (
   border: 2px solid var(--border-color);
 
   cursor: not-allowed;
-}
-
-:global(:root) {
-  --status-regular: #22c55e;
-  --status-irregular: #ef4444;
-  --status-expired: #f97316;
-  --status-unavailable: #6b7280;
 }
 </style>
