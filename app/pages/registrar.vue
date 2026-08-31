@@ -104,16 +104,7 @@ const formatSize = (bytes: number): string => {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-const getErrorMessage = (error: CndError | undefined): string => {
-  // Só exibe a mensagem do backend para resultados de análise do documento
-  // (ex.: não identificado como CND, CND vencida). Outros tipos de erro
-  // (falhas internas, de rede, de serviços externos) usam uma mensagem genérica
-  // para não vazar detalhes de implementação ao usuário.
-  if (error?.type === 'ANALYSIS_ERROR' && error.message) {
-    return error.message
-  }
-  return 'Erro ao processar o documento'
-}
+const { getErrorMessage } = useBackendErrorMessage()
 
 const enviar = async (): Promise<void> => {
   if (files.value.length === 0 || status.value === 'loading') {

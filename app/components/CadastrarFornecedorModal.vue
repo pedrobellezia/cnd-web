@@ -2,6 +2,7 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useCadastrarFornecedorPdf } from '@/composables/useCadastrarFornecedorPdf'
 import type { FornecedorPdfResult } from '@/composables/useCadastrarFornecedorPdf'
+import { useBackendErrorMessage } from '@/composables/useBackendErrorMessage'
 
 const emit = defineEmits<{
   close: []
@@ -9,6 +10,7 @@ const emit = defineEmits<{
 }>()
 
 const { loading, error, enviar } = useCadastrarFornecedorPdf()
+const { getErrorMessage } = useBackendErrorMessage()
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024
 const MAX_FILE_SIZE_MB = 10
@@ -278,7 +280,7 @@ onBeforeUnmount(() => {
                 v-else
                 class="result-item__detail"
               >
-                {{ resultado.error?.message || 'Erro ao processar o documento' }}
+                {{ getErrorMessage(resultado.error) }}
               </span>
             </div>
           </div>
