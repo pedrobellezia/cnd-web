@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  return await $fetch(`${config.public.apiUrl}${config.apiBasePath}`, {
+  return await $fetch(`${config.public.apiUrl}/cnd`, {
     method: 'POST',
     body: formData,
     headers: {
