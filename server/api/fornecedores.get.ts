@@ -33,7 +33,7 @@ export default defineEventHandler(async (event) => {
   return await $fetch(`${config.public.apiUrl}/fornecedor`, {
     query,
     headers: {
-      'x-api-key': config.apiKey,
+      Authorization: `Bearer ${config.apiKey}`,
     },
   })
 })

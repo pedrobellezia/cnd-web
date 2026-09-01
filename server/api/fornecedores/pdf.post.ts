@@ -52,7 +52,7 @@ export default defineEventHandler(async (event) => {
     method: 'POST',
     body: formData,
     headers: {
-      'x-api-key': config.apiKey,
+      Authorization: `Bearer ${config.apiKey}`,
     },
   })
 })
