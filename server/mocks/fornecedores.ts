@@ -43,7 +43,7 @@ export const mockFornecedores: MockFornecedor[] = [
       cnd('fgts', 'regular', 25),
       cnd('trabalhista', 'regular', 90),
       cnd('estadual', 'irregular', null),
-      cnd('municipal', 'regular', 15),
+      cnd('municipal', 'regular', -10),
     ],
   },
   {

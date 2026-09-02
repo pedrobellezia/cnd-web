@@ -41,17 +41,11 @@ const getStatusColor = (
 }
 
 const getBadgeLabel = (
-  status: string | null,
-  validade?: string | null,
+  status: string | null
 ): string => {
   if (!status || status === 'em desenvolvimento' || status === 'error') {
     return 'INDISPONÍVEL'
-  }
-
-  if (validade && isVencido(validade)) {
-    return 'VENCIDA'
-  }
-
+  }  
   return status.toUpperCase()
 }
 
@@ -94,8 +88,7 @@ const getFileUrl = (
       >
         {{
           getBadgeLabel(
-            props.cnd.status,
-            props.cnd.validade,
+            props.cnd.status
           )
         }}
       </span>
@@ -117,7 +110,10 @@ const getFileUrl = (
           Validade:
         </span>
 
-        <span class="value">
+        <span
+          class="value"
+          :class="{ vencida: props.cnd.status === 'regular' && isVencido(props.cnd.validade) }"
+        >
           {{ formatDate(props.cnd.validade) }}
         </span>
       </div>

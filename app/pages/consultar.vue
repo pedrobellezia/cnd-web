@@ -625,18 +625,22 @@ onMounted(() => {
                 <span
                   class="status-badge"
                   :class="{
-                    'status-badge--regular': cnd.status === 'regular' && !isVencido(cnd.validade),
-                    'status-badge--irregular': cnd.status === 'irregular',
-                    'status-badge--expired': cnd.status === 'regular' && isVencido(cnd.validade),
+                    'status-badge--regular': cnd.status === 'regular',
+                    'status-badge--irregular': cnd.status === 'irregular'
                   }"
                 >
-                  {{ isVencido(cnd.validade) && cnd.status === 'regular' ? 'VENCIDA' : cnd.status.toUpperCase() }}
+                  {{ cnd.status.toUpperCase() }}
                 </span>
               </td>
 
               <td data-label="Emissão">{{ formatDate(cnd.emissao) }}</td>
 
-              <td data-label="Validade">{{ formatDate(cnd.validade) }}</td>
+              <td
+                data-label="Validade"
+                :class="{ vencida: cnd.status === 'regular' && isVencido(cnd.validade) }"
+              >
+                {{ formatDate(cnd.validade) }}
+              </td>
 
               <td data-label="Arquivo">
                 <a
@@ -1178,10 +1182,6 @@ onMounted(() => {
 
 .status-badge--irregular {
   background: var(--color-error);
-}
-
-.status-badge--expired {
-  background: var(--color-warning);
 }
 
 .file-link {

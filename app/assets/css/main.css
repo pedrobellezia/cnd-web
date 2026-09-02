@@ -50,6 +50,11 @@
   --color-disabled-border: #444444;
 }
 
+.vencida {
+  color: var(--color-error);
+  font-weight: 700;
+}
+
 body {
   min-height: 100vh;
   font-family:
