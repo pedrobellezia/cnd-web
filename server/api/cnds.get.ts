@@ -48,10 +48,29 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  return await $fetch(`${config.public.apiUrl}/cnd`, {
-    query,
-    headers: {
-      Authorization: `Bearer ${config.apiKey}`,
-    },
-  })
+  try {
+    return await $fetch(`${config.public.apiUrl}/cnd`, {
+      query,
+      headers: {
+        Authorization: `Bearer ${config.apiKey}`,
+      },
+    })
+  } catch (err: unknown) {
+    const fetchError = err as { response?: unknown }
+
+    // Erro com resposta do cnd-api (ex.: validação) - repassa como está, o
+    // client já sabe extrair a mensagem de errorData.data.message
+    if (fetchError.response) {
+      throw err
+    }
+
+    // Falha de conectividade (cnd-api fora do ar, timeout, DNS etc.) - sem
+    // isso, o erro sobe como "unhandled" pro h3 e pode incluir stack trace
+    // interno na resposta em modo debug
+    throw createError({
+      statusCode: 502,
+      statusMessage: 'Falha ao conectar com o serviço de CND',
+      data: { message: 'Não foi possível conectar ao serviço de CND. Tente novamente em instantes.' },
+    })
+  }
 })
