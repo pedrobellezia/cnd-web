@@ -43,6 +43,31 @@ const filtrosAplicados = reactive({
   validadeAte: '',
 })
 
+type SortField = 'createdAt' | 'validade' | 'emissao' | 'status'
+type SortOrder = 'asc' | 'desc'
+
+const sortBy = ref<SortField | null>(null)
+const sortOrder = ref<SortOrder | null>(null)
+
+const sortParam = computed(() =>
+  sortBy.value && sortOrder.value ? `${sortBy.value}:${sortOrder.value}` : undefined,
+)
+
+const alternarOrdenacao = (campo: SortField): void => {
+  if (sortBy.value !== campo) {
+    sortBy.value = campo
+    sortOrder.value = 'asc'
+  } else if (sortOrder.value === 'asc') {
+    sortOrder.value = 'desc'
+  } else {
+    sortBy.value = null
+    sortOrder.value = null
+  }
+
+  limparSelecao()
+  buscarCnds({ ...snapshotFiltros(filtrosAplicados), sort: sortParam.value, page: 1 })
+}
+
 function snapshotFiltros(source: typeof filtros) {
   return {
     name: source.name,
@@ -129,7 +154,7 @@ const aplicarFiltros = (): void => {
   Object.assign(filtrosAplicados, snapshotFiltros(filtros))
 
   limparSelecao()
-  buscarCnds({ ...snapshotFiltros(filtrosAplicados), page: 1 })
+  buscarCnds({ ...snapshotFiltros(filtrosAplicados), sort: sortParam.value, page: 1 })
 }
 
 const limparFiltros = (): void => {
@@ -145,12 +170,12 @@ const limparFiltros = (): void => {
   Object.assign(filtrosAplicados, snapshotFiltros(filtros))
 
   limparSelecao()
-  buscarCnds({ page: 1 })
+  buscarCnds({ sort: sortParam.value, page: 1 })
 }
 
 const irParaPagina = (novaPagina: number): void => {
   limparSelecao()
-  buscarCnds({ ...snapshotFiltros(filtrosAplicados), page: novaPagina })
+  buscarCnds({ ...snapshotFiltros(filtrosAplicados), sort: sortParam.value, page: novaPagina })
 }
 
 const cndsVisiveis = computed(() => cnds.value.filter((cnd) => cnd.status !== 'error'))
@@ -529,9 +554,39 @@ onMounted(() => {
               <th>Fornecedor</th>
               <th>CNPJ</th>
               <th>Tipo</th>
-              <th>Status</th>
-              <th>Emissão</th>
-              <th>Validade</th>
+              <th
+                class="sortable"
+                :aria-sort="sortBy === 'status' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'"
+                @click="alternarOrdenacao('status')"
+              >
+                Status
+                <span
+                  v-if="sortBy === 'status'"
+                  class="sort-indicator"
+                >{{ sortOrder === 'asc' ? '▲' : '▼' }}</span>
+              </th>
+              <th
+                class="sortable"
+                :aria-sort="sortBy === 'emissao' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'"
+                @click="alternarOrdenacao('emissao')"
+              >
+                Emissão
+                <span
+                  v-if="sortBy === 'emissao'"
+                  class="sort-indicator"
+                >{{ sortOrder === 'asc' ? '▲' : '▼' }}</span>
+              </th>
+              <th
+                class="sortable"
+                :aria-sort="sortBy === 'validade' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'"
+                @click="alternarOrdenacao('validade')"
+              >
+                Validade
+                <span
+                  v-if="sortBy === 'validade'"
+                  class="sort-indicator"
+                >{{ sortOrder === 'asc' ? '▲' : '▼' }}</span>
+              </th>
               <th>Arquivo</th>
               <th>Download</th>
             </tr>
@@ -1085,6 +1140,20 @@ onMounted(() => {
 .cnds-table td {
   padding: 0.85rem 1rem;
   border-top: 1px solid var(--border-color);
+}
+
+.cnds-table th.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.cnds-table th.sortable:hover {
+  opacity: 0.85;
+}
+
+.sort-indicator {
+  margin-left: 0.35rem;
+  font-size: 0.65rem;
 }
 
 .cnds-table .mono {

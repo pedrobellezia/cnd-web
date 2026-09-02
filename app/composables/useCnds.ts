@@ -29,6 +29,7 @@ export interface CndsFiltros {
   emissaoAte?: string
   validadeDe?: string
   validadeAte?: string
+  sort?: string
   page?: number
   limit?: number
 }
@@ -63,6 +64,7 @@ export function useCnds() {
       if (filtros.emissaoAte) query.emissaoAte = filtros.emissaoAte
       if (filtros.validadeDe) query.validadeDe = filtros.validadeDe
       if (filtros.validadeAte) query.validadeAte = filtros.validadeAte
+      if (filtros.sort) query.sort = filtros.sort
 
       query.page = filtros.page ?? 1
       query.limit = filtros.limit ?? limit.value
